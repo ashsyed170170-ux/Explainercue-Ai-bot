@@ -2,12 +2,14 @@ import streamlit as st
 import google.generativeai as genai
 import os
 
-# 1. SETUP: Apni Gemini API Key yahan direct inverted commas "" me dalein
-GEMINI_API_KEY = "AQ.Ab8RN6L_8afZufZ5B0d47WQmTXUtc9uQhxhCC_jzYhaiOJuvNA"
-genai.configure(api_key=GEMINI_API_KEY)
+# 1. SETUP: Streamlit Secrets se secure tarike se Key load karna
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+else:
+    # Local test ke liye fallback agar secrets file na bani ho
+    genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
 # 2. DATA LOAD: Direct variables me data daal diya taake ghalti ka chance na ho
-
 properties_data = """
 Available Properties:
 1. DHA Phase 6 - 500 Sq Yards Luxury House. Price: 8 Crore PKR. 4 Bedrooms, Attached Baths, Beautiful Lawn, Modular Kitchen.
@@ -38,14 +40,17 @@ Properties Data:
 """
 
 # Gemini Model initialize karna
-model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",  # Fast and free model
-    system_instruction=system_instruction
-)
-
-# 5. CHAT HISTORY: Puraani baatein yaad rakhne ke liye
-if "chat" not in st.session_state:
-    st.session_state.chat = model.start_chat(history=[])
+try:
+    model = genai.GenerativeModel(
+        model_name="gemini-2.5-flash",  # Fast and free model
+        system_instruction=system_instruction
+    )
+    
+    # 5. CHAT HISTORY: Puraani baatein yaad rakhne ke liye
+    if "chat" not in st.session_state:
+        st.session_state.chat = model.start_chat(history=[])
+except Exception as e:
+    st.error("API configuration me masla hai. Please check your Streamlit Secrets.")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -64,7 +69,10 @@ if user_input := st.chat_input("DHA, Clifton ya Bahria me ghar chahiye?"):
 
     # Gemini se response lena aur screen par dikhana
     with st.chat_message("assistant"):
-        response = st.session_state.chat.send_message(user_input)
-        answer = response.text
-        st.markdown(answer)
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+        try:
+            response = st.session_state.chat.send_message(user_input)
+            answer = response.text
+            st.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+        except Exception as e:
+            st.error("Authentication Error: Please make sure your GEMINI_API_KEY is correctly set in Streamlit Secrets.")

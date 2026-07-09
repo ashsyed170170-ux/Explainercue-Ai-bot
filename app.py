@@ -1,7 +1,6 @@
 import os
-import pypdf
 import streamlit as st
-import google.generativeai as genai  # Stable library integration
+import google.generativeai as genai
 
 # Streamlit secrets se key uthana aur configure karna
 if "GEMINI_API_KEY" in st.secrets:
@@ -9,33 +8,28 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     api_key = os.getenv("GEMINI_API_KEY")
 
-# Gemini ko key ke sath configure karna
 genai.configure(api_key=api_key)
 
-# PDF read karne ka function
-def read_pdf_data(pdf_path="Company_data.pdf"):
+# Background mein file read karne ka function (.txt extension ke sath)
+def read_knowledge_base(file_path="Company_data.pdf.txt"):
     try:
-        text = ""
-        with open(pdf_path, "rb") as file:
-            pdf_reader = pypdf.PdfReader(file)
-            for page in pdf_reader.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
-        return text
+        with open(file_path, "r", encoding="utf-8") as file:
+            return file.read()
     except FileNotFoundError:
         return ""
 
-pdf_filename = "Company_data.pdf"
-knowledge_base = read_pdf_data(pdf_filename)
+# GitHub par majood exact file name load karna
+file_filename = "Company_data.pdf.txt"
+knowledge_base = read_knowledge_base(file_filename)
 
 # --- Streamlit UI aur Chat Logic ---
 st.title("Arcturus Group AI Assistant")
 
+# Sidebar status bar
 if knowledge_base:
-    st.sidebar.success("✅ PDF Data Loaded Successfully!")
+    st.sidebar.success("✅ Knowledge Base Loaded Successfully!")
 else:
-    st.sidebar.error("❌ ERROR: Company_data.pdf not found!")
+    st.sidebar.error("❌ ERROR: Company_data.pdf.txt not found in root folder!")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -49,7 +43,7 @@ if user_input := st.chat_input("Ask anything about Arcturus Group..."):
         st.markdown(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    # Fully English System Prompt
+    # Fully English System Prompt for strict compliance
     system_prompt = f"""
     You are a professional Business & Real Estate Assistant. 
     Your task is to answer user queries strictly based on the provided Context Data below. 
@@ -61,10 +55,9 @@ if user_input := st.chat_input("Ask anything about Arcturus Group..."):
     CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language. Even if the user asks questions in Roman Urdu, Hindi, or any other language, your entire response must be written in clear, professional English. Do not use any non-English words (like 'Ji', 'Haan', 'Maaf kijiye') under any circumstances.
     """
     
-    # Gemini API Call using the stable configuration
+    # Gemini 1.5 Flash Model configuration
     model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # System instruction aur user input ko milakar bhejna
     response = model.generate_content(f"{system_prompt}\n\nUser Question: {user_input}")
     answer = response.text
     

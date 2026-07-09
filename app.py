@@ -1,35 +1,31 @@
 import os
+import requests
 import streamlit as st
-import google.generativeai as genai
 
-# Streamlit secrets se key uthana aur configure karna
+# Streamlit secrets se API key uthana
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
     api_key = os.getenv("GEMINI_API_KEY")
 
-genai.configure(api_key=api_key)
-
-# Background mein file read karne ka function (.txt extension ke sath)
-def read_knowledge_base(file_path="company_data.pdf.txt"):
+# Background mein file read karne ka function
+def read_knowledge_base(file_path="Company_data.pdf.txt"):
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             return file.read()
     except FileNotFoundError:
         return ""
 
-# GitHub par majood exact file name load karna
 file_filename = "Company_data.pdf.txt"
 knowledge_base = read_knowledge_base(file_filename)
 
-# --- Streamlit UI aur Chat Logic ---
+# --- Streamlit UI ---
 st.title("Arcturus Group AI Assistant")
 
-# Sidebar status bar
 if knowledge_base:
     st.sidebar.success("✅ Knowledge Base Loaded Successfully!")
 else:
-    st.sidebar.error("❌ ERROR: Company_data.pdf.txt not found in root folder!")
+    st.sidebar.error("❌ ERROR: Company_data.pdf.txt not found!")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -43,24 +39,46 @@ if user_input := st.chat_input("Ask anything about Arcturus Group..."):
         st.markdown(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    # Fully English System Prompt for strict compliance
-    system_prompt = f"""
-    You are a professional Business & Real Estate Assistant. 
-    Your task is to answer user queries strictly based on the provided Context Data below. 
-    If the answer cannot be found in the context, politely state that you do not have this information.
+    if not api_key:
+        answer = "ERROR: GEMINI_API_KEY is missing in Streamlit Secrets!"
+    else:
+        # Strict English System Prompt
+        system_prompt = f"""You are a professional Business & Real Estate Assistant. 
+Your task is to answer user queries strictly based on the provided Context Data below. 
+If the answer cannot be found in the context, politely state that you do not have this information.
 
-    Context Data:
-    {knowledge_base}
-    
-    CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language. Even if the user asks questions in Roman Urdu, Hindi, or any other language, your entire response must be written in clear, professional English. Do not use any non-English words (like 'Ji', 'Haan', 'Maaf kijiye') under any circumstances.
-    """
-    
-    # Gemini 1.5 Flash Model configuration
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    response = model.generate_content(f"{system_prompt}\n\nUser Question: {user_input}")
-    answer = response.text
-    
+Context Data:
+{knowledge_base}
+
+CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language. Even if the user asks questions in Roman Urdu or Hindi, your entire response must be written in clear, professional English. Do not use any non-English words."""
+        
+        # Direct Gemini API URL for Gemini 2.5 Flash
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        
+        # Dono text ko ek hi string mein structure kar ke bhej rahe hain (Format Fix)
+        full_prompt_text = f"{system_prompt}\n\nUser Question: {user_input}"
+        
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": full_prompt_text}
+                ]
+            }]
+        }
+        
+        headers = {"Content-Type": "application/json"}
+        
+        try:
+            response = requests.post(url, json=payload, headers=headers)
+            if response.status_code == 200:
+                res_data = response.json()
+                answer = res_data['candidates'][0]['content']['parts'][0]['text']
+            else:
+                # Agar phir bhi masla aaye to exact error detail print hogi screen par
+                answer = f"API Error (Status {response.status_code}): {response.text}"
+        except Exception as e:
+            answer = f"Connection Error: Could not connect to Gemini API. {str(e)}"
+            
     with st.chat_message("assistant"):
         st.markdown(answer)
     st.session_state.messages.append({"role": "assistant", "content": answer})

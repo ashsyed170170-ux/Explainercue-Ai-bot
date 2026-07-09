@@ -1,24 +1,17 @@
 import os
 import streamlit as st
+from google import genai
 
-# Direct API verification ke liye try-except block
-try:
-    import google.generativeai as genai
-except ImportError:
-    # Agar library missing ho to on-the-fly install ho jaye
-    os.system("pip install google-generativeai")
-    import google.generativeai as genai
-
-# Streamlit secrets se key fetch karna
+# Streamlit secrets se key uthana
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
     api_key = os.getenv("GEMINI_API_KEY")
 
-if api_key:
-    genai.configure(api_key=api_key)
+# 2026 Google Official Client Initialization
+client = genai.Client(api_key=api_key)
 
-# Flexible file search execution
+# Background mein file read karne ka tareeqa
 def read_knowledge_base():
     possible_names = ["company_data", "Company_data", "Company_data.pdf.txt", "company_data.pdf.txt"]
     for name in possible_names:
@@ -32,14 +25,14 @@ def read_knowledge_base():
 
 knowledge_base = read_knowledge_base()
 
-# --- Streamlit UI ---
+# --- Streamlit UI Setup ---
 st.title("Arcturus Group AI Assistant")
 
 if knowledge_base and len(knowledge_base) > 10:
     st.sidebar.success("✅ Knowledge Base Loaded Successfully!")
 else:
     st.sidebar.warning("⚠️ Reading from backup storage...")
-    knowledge_base = "Arcturus Group is a senior real estate advisory firm that maximizes value for its clients by providing strategic capital markets solution."
+    knowledge_base = "Arcturus Group is a premier senior real estate advisory firm that maximizes value for its clients by providing independent analytical and strategic services to investors, lenders, and developers."
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -56,6 +49,7 @@ if user_input := st.chat_input("Ask anything about Arcturus Group..."):
     if not api_key:
         answer = "ERROR: GEMINI_API_KEY is missing in Streamlit Secrets!"
     else:
+        # Strict English Prompts
         system_prompt = f"""You are a professional Business & Real Estate Assistant. 
 Your task is to answer user queries strictly based on the provided Context Data below. 
 If the answer cannot be found in the context, politely state that you do not have this information.
@@ -66,12 +60,14 @@ Context Data:
 CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language. Even if the user asks questions in Roman Urdu or Hindi, your entire response must be written in clear, professional English. Do not use any non-English words."""
         
         try:
-            # Using the absolute native SDK configuration
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(f"{system_prompt}\n\nUser Question: {user_input}")
+            # 2026 Naya model aur call format (No URL errors anymore)
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[system_prompt, user_input]
+            )
             answer = response.text
         except Exception as e:
-            answer = f"System Error: Native engine failed to compile. {str(e)}"
+            answer = f"System Connection Alert: {str(e)}"
             
     with st.chat_message("assistant"):
         st.markdown(answer)

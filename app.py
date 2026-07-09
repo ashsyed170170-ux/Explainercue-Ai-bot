@@ -1,7 +1,7 @@
 import os
 import pypdf
 import streamlit as st
-from google import genai  # Gemini official library
+import google.genai as genai
 
 # Streamlit secrets se key uthana
 if "GEMINI_API_KEY" in st.secrets:
@@ -26,18 +26,16 @@ def read_pdf_data(pdf_path="Company_data.pdf"):
     except FileNotFoundError:
         return ""
 
-# GitHub par majood sahi file name (C is capital)
 pdf_filename = "Company_data.pdf"
 knowledge_base = read_pdf_data(pdf_filename)
 
 # --- Streamlit UI aur Chat Logic ---
 st.title("Arcturus Group AI Assistant")
 
-# Sidebar mein status check dikhana ke file mili ya nahi
 if knowledge_base:
     st.sidebar.success("✅ PDF Data Loaded Successfully!")
 else:
-    st.sidebar.error("❌ ERROR: Company_data.pdf not found in root folder!")
+    st.sidebar.error("❌ ERROR: Company_data.pdf not found!")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -51,19 +49,19 @@ if user_input := st.chat_input("Ask anything about Arcturus Group..."):
         st.markdown(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    # Strictly English response system prompt
+    # Fully English System Prompt
     system_prompt = f"""
-    Aap ek professional Business & Real Estate Assistant hain. 
-    Aapko sirf aur sirf nechy diye gaye data (Context) ke mutabik jawab dena hai. 
-    Agar data mein jawab na ho, to bol dein ke maloomat nahi hain.
+    You are a professional Business & Real Estate Assistant. 
+    Your task is to answer user queries strictly based on the provided Context Data below. 
+    If the answer cannot be found in the context, politely state that you do not have this information.
 
     Context Data:
     {knowledge_base}
     
-    CRITICAL INSTRUCTION: You must respond ONLY in English language. Even if the user asks questions in Roman Urdu, Hindi, or any other language, your response must strictly be in clear, professional English. Do not use Roman Urdu words like 'Ji', 'Haan', or 'Maaf kijiye' in your output.
+    CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language. Even if the user asks questions in Roman Urdu, Hindi, or any other language, your entire response must be written in clear, professional English. Do not use any non-English words (like 'Ji', 'Haan', 'Maaf kijiye') under any circumstances.
     """
     
-    # Gemini API Call using modern standard model
+    # Gemini API Call
     response = client.models.generate_content(
         model='gemini-2.5-flash',
         contents=[system_prompt, user_input]

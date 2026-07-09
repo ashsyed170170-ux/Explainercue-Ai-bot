@@ -11,7 +11,7 @@ else:
 genai.configure(api_key=api_key)
 
 # Background mein file read karne ka function (.txt extension ke sath)
-def read_knowledge_base(file_path="Company_data.pdf.txt"):
+def read_knowledge_base(file_path="company_data.pdf.txt"):
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             return file.read()

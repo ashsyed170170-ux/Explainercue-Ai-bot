@@ -8,11 +8,9 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     api_key = os.getenv("GEMINI_API_KEY")
 
-# Background mein file read karne ka function
-def read_knowledge_base(file_path="Company_data.pdf.txt"):
- # Background mein file read karne ka naya aur safe tareeqa
+# Background mein file read karne ka flexible tareeqa
 def read_knowledge_base():
-    # Yeh un saare naamon ko check karega jo aapki file ke ho sakte hain
+    # GitHub par mojood different file naming conventions ko check karna
     possible_names = ["Company_data.pdf.txt", "company_data.pdf.txt", "Company_data.pdf"]
     for name in possible_names:
         if os.path.exists(name):
@@ -28,14 +26,13 @@ knowledge_base = read_knowledge_base()
 # --- Streamlit UI ---
 st.title("Arcturus Group AI Assistant")
 
-# Sidebar status code check
-if len(knowledge_base) > 10:  # Agar file mein thoda sa bhi data parha gaya hai
+# Sidebar status validation
+if len(knowledge_base).strip() > 10:
     st.sidebar.success("✅ Knowledge Base Loaded Successfully!")
 else:
-    # Agar sach mein data bilkul khaali hai
-    st.sidebar.warning("⚠️ Warning: Reading from backup memory.")
-    # Agar data bilkul nahi mil raha to error na dikhaye agar bot chal raha hai
-    knowledge_base = "Arcturus Group is a senior real estate advisory firm..." # Backup context
+    st.sidebar.warning("⚠️ Reading from backup storage...")
+    # Fallback knowledge base data to prevent empty context
+    knowledge_base = "Arcturus Group is a senior real estate advisory firm that maximizes value for its clients."
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -62,7 +59,7 @@ Context Data:
 
 CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language. Even if the user asks questions in Roman Urdu or Hindi, your entire response must be written in clear, professional English. Do not use any non-English words."""
         
-        # FIXED: Using the globally available gemini-1.5-flash endpoint
+        # Standard Stable endpoint
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
         
         full_prompt_text = f"{system_prompt}\n\nUser Question: {user_input}"

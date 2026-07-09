@@ -1,16 +1,16 @@
 import os
 import pypdf
 import streamlit as st
-import google.genai as genai
+import google.generativeai as genai  # Stable library integration
 
-# Streamlit secrets se key uthana
+# Streamlit secrets se key uthana aur configure karna
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
     api_key = os.getenv("GEMINI_API_KEY")
 
-# Gemini client initialize karna
-client = genai.Client(api_key=api_key)
+# Gemini ko key ke sath configure karna
+genai.configure(api_key=api_key)
 
 # PDF read karne ka function
 def read_pdf_data(pdf_path="Company_data.pdf"):
@@ -61,12 +61,11 @@ if user_input := st.chat_input("Ask anything about Arcturus Group..."):
     CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language. Even if the user asks questions in Roman Urdu, Hindi, or any other language, your entire response must be written in clear, professional English. Do not use any non-English words (like 'Ji', 'Haan', 'Maaf kijiye') under any circumstances.
     """
     
-    # Gemini API Call
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=[system_prompt, user_input]
-    )
+    # Gemini API Call using the stable configuration
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
+    # System instruction aur user input ko milakar bhejna
+    response = model.generate_content(f"{system_prompt}\n\nUser Question: {user_input}")
     answer = response.text
     
     with st.chat_message("assistant"):

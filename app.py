@@ -51,7 +51,8 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if user_input := st.chat_input("Ask anything about Arcturus Group..."):
+# Placeholder text updated to match ExplainerCue
+if user_input := st.chat_input("Ask anything about ExplainerCue..."):
     with st.chat_message("user"):
         st.markdown(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
@@ -72,6 +73,7 @@ Context Data:
 CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language. Even if the user asks questions in Roman Urdu or Hindi, your entire response must be written in clear, professional English. Do not use any non-English words under any circumstances."""
         
         try:
+            # OPTIMIZATION: Passing only system_prompt and the latest user_input to save tokens/quota
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=[system_prompt, user_input]
@@ -83,3 +85,4 @@ CRITICAL CONSTRAINT: You must respond ONLY and strictly in the English language.
     with st.chat_message("assistant"):
         st.markdown(answer)
     st.session_state.messages.append({"role": "assistant", "content": answer})
+
